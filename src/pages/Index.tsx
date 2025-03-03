@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState<Record<string, Blob>>({});
+  const [responses, setResponses] = useState<QuestionResponse[]>([]);
   const [submittingResponse, setSubmittingResponse] = useState(false);
   const { toast } = useToast();
 
@@ -22,19 +22,29 @@ const Index = () => {
   });
 
   const handleRecordingComplete = (questionId: string, audioBlob: Blob) => {
-    setResponses(prev => ({
-      ...prev,
-      [questionId]: audioBlob,
-    }));
+    // Check if response for this question already exists
+    const existingResponseIndex = responses.findIndex(r => r.questionId === questionId);
+    
+    if (existingResponseIndex >= 0) {
+      // Update existing response
+      setResponses(prev => prev.map((response, index) => 
+        index === existingResponseIndex 
+          ? { ...response, audioBlob } 
+          : response
+      ));
+    } else {
+      // Add new response
+      setResponses(prev => [...prev, { questionId, audioBlob }]);
+    }
   };
 
   const handleSubmitResponse = async () => {
     if (!questions) return;
     
     const currentQuestion = questions[currentQuestionIndex];
-    const audioBlob = responses[currentQuestion.id];
+    const responseForCurrentQuestion = responses.find(r => r.questionId === currentQuestion.id);
     
-    if (!audioBlob) {
+    if (!responseForCurrentQuestion) {
       toast({
         title: "No recording found",
         description: "Please record your answer before proceeding.",
@@ -78,7 +88,11 @@ const Index = () => {
 
   const handleNextQuestion = () => {
     if (questions && currentQuestionIndex < questions.length - 1) {
-      if (!responses[questions[currentQuestionIndex].id]) {
+      const hasResponseForCurrentQuestion = responses.some(
+        r => r.questionId === questions[currentQuestionIndex].id
+      );
+      
+      if (!hasResponseForCurrentQuestion) {
         toast({
           title: "No recording found",
           description: "Please record your answer before proceeding.",
@@ -112,7 +126,7 @@ const Index = () => {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const hasResponse = !!responses[currentQuestion.id];
+  const hasResponse = responses.some(r => r.questionId === currentQuestion.id);
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   return (
