@@ -32,17 +32,19 @@ const Index = () => {
   } = useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const submitResponsesMutation = useMutation({
     mutationFn: submitResponses,
-    onSuccess: (evaluations: QuestionEvaluation[]) => {
+    onSuccess: ({ results }: { results: QuestionEvaluation[] }) => {
       toast({
         title: "Responses submitted",
         description: "Your responses have been evaluated.",
       });
       
-      setEvaluations(evaluations);
+      setEvaluations(results);
     },
     onError: (error) => {
       console.error(error);
@@ -68,7 +70,14 @@ const Index = () => {
         )
       );
     } else {
-      setResponses((prev) => [...prev, { questionId, audioBlob }]);
+      setResponses((prev) => [
+        ...prev,
+        {
+          questionId,
+          audioBlob,
+          questionText: questions?.find((q) => q.id === questionId)?.text || "",
+        },
+      ]);
     }
   };
 

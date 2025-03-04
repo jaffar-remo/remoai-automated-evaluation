@@ -42,7 +42,7 @@ export const healthCheck = async (): Promise<string> => {
     });
 };
 
-export const submitResponses = async (responses: QuestionResponseDto[]): Promise<QuestionEvaluation[]> => {
+export const submitResponses = async (responses: QuestionResponseDto[]): Promise<{results: QuestionEvaluation[]}> => {
   try {
     const response = await axios.post(`${BASE_URL}/submit-responses`, responses, {
       headers: {

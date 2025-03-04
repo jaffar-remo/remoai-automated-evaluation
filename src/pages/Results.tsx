@@ -24,7 +24,7 @@ const Results = () => {
   }
   
   // Calculate overall score
-  const overallScore = evaluations.reduce((sum, eval) => sum + eval.score, 0) / evaluations.length;
+  const overallScore = evaluations.reduce((sum, e) => sum + e.score, 0) / evaluations.length;
   
   const toggleExpand = (questionId: string) => {
     setExpandedQuestions(prev => ({

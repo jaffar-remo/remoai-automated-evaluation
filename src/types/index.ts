@@ -14,6 +14,7 @@ export interface RecordingState {
 
 export interface QuestionResponse {
   questionId: string;
+  questionText: string,
   audioBlob: Blob;
 }
 
