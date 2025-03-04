@@ -36,3 +36,8 @@ export interface CodingQuestionEvaluation {
   feedback: string;
   score: number;
 }
+
+export interface InterviewSetupData {
+  jobDescription: string;
+  cvFile: File | null;
+}

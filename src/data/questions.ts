@@ -34,6 +34,31 @@ export const fetchQuestions = async (): Promise<Question[]> => {
   }
 };
 
+export const generateInterviewQuestions = async (
+  jobDescription: string,
+  cvFile: File
+): Promise<Question[]> => {
+  try {
+    const formData = new FormData();
+    formData.append("job_description", jobDescription);
+    formData.append("cv_file", cvFile);
+
+    const response = await axios.post(
+      `${BASE_URL}/generate-interview-questions`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error generating interview questions:", error);
+    throw error;
+  }
+};
+
 export const healthCheck = async (): Promise<string> => {
   return fetch(`${BASE_URL}/`)
     .then((response) => {

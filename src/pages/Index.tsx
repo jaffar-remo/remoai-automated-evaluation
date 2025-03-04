@@ -4,17 +4,21 @@ import {
   fetchQuestions,
   submitResponses,
   fetchCodingQuestion,
+  generateInterviewQuestions,
 } from "@/data/questions";
 import {
   QuestionResponse,
   QuestionEvaluation,
   CodingQuestionEvaluation,
+  InterviewSetupData,
+  Question,
 } from "@/types";
 import QuestionCard from "@/components/QuestionCard";
 import ProgressBar from "@/components/ProgressBar";
 import AnimatedContainer from "@/components/AnimatedContainer";
 import ResultsView from "@/components/ResultsView";
 import CodingQuestion from "@/components/CodingQuestion";
+import InterviewSetup from "@/components/InterviewSetup";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Code, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +32,7 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 const Index = () => {
+  const [isSetupStep, setIsSetupStep] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<QuestionResponse[]>([]);
   const [evaluations, setEvaluations] = useState<QuestionEvaluation[] | null>(
@@ -36,17 +41,28 @@ const Index = () => {
   const [isCodingStep, setIsCodingStep] = useState(false);
   const [codingEvaluation, setCodingEvaluation] =
     useState<CodingQuestionEvaluation | null>(null);
+  const [questions, setQuestions] = useState<Question[] | null>(null);
   const { toast } = useToast();
 
-  const {
-    data: questions,
-    isLoading: isQuestionsLoading,
-    error: questionsError,
-  } = useQuery({
-    queryKey: ["questions"],
-    queryFn: fetchQuestions,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+  const generateQuestionsMutation = useMutation({
+    mutationFn: ({ jobDescription, cvFile }: InterviewSetupData) => 
+      generateInterviewQuestions(jobDescription, cvFile as File),
+    onSuccess: (data) => {
+      setQuestions(data);
+      setIsSetupStep(false);
+      toast({
+        title: "Questions generated",
+        description: "Your interview questions are ready.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error generating questions:", error);
+      toast({
+        title: "Failed to generate questions",
+        description: "Please try again or check your inputs.",
+        variant: "destructive",
+      });
+    },
   });
 
   const {
@@ -86,6 +102,10 @@ const Index = () => {
       });
     },
   });
+
+  const handleInterviewSetupComplete = (data: InterviewSetupData) => {
+    generateQuestionsMutation.mutate(data);
+  };
 
   const handleRecordingComplete = (questionId: string, audioBlob: Blob) => {
     const existingResponseIndex = responses.findIndex(
@@ -186,23 +206,33 @@ const Index = () => {
     );
   }
 
-  if (isQuestionsLoading) {
+  if (isSetupStep) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-xl font-medium">Loading questions...</p>
+      <div className="min-h-screen flex flex-col p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+            AI Interview Preparation
+          </h1>
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Upload your CV and the job description to start your personalized interview preparation.
+          </p>
+        </header>
+
+        <div className="flex-grow flex flex-col items-center justify-center">
+          <InterviewSetup 
+            onComplete={handleInterviewSetupComplete} 
+            isLoading={generateQuestionsMutation.isPending}
+          />
+        </div>
       </div>
     );
   }
 
-  if (questionsError || !questions) {
+  if (generateQuestionsMutation.isPending) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
-        <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
-        <p className="text-muted-foreground mb-6">
-          We couldn't load the interview questions. Please try again later.
-        </p>
-        <Button onClick={() => window.location.reload()}>Refresh</Button>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-xl font-medium">Generating your questions...</p>
       </div>
     );
   }
@@ -264,11 +294,13 @@ const Index = () => {
         </p>
       </header>
 
-      <ProgressBar
-        currentQuestion={currentQuestionIndex + 1}
-        totalQuestions={questions?.length || 0}
-        className="mb-8"
-      />
+      {questions && (
+        <ProgressBar
+          currentQuestion={currentQuestionIndex + 1}
+          totalQuestions={questions.length}
+          className="mb-8"
+        />
+      )}
 
       <div className="flex-grow flex flex-col items-center justify-center mb-8">
         {questions && (
@@ -290,17 +322,19 @@ const Index = () => {
       </div>
 
       <div className="flex justify-between items-center mt-auto">
-        <Button
-          variant="outline"
-          onClick={handlePreviousQuestion}
-          disabled={
-            currentQuestionIndex === 0 || submitResponsesMutation.isPending
-          }
-          className="px-4 py-2"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Previous
-        </Button>
+        {!isSetupStep && (
+          <Button
+            variant="outline"
+            onClick={handlePreviousQuestion}
+            disabled={
+              currentQuestionIndex === 0 || submitResponsesMutation.isPending
+            }
+            className="px-4 py-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+        )}
 
         {questions && currentQuestionIndex < questions.length - 1 ? (
           <Button
