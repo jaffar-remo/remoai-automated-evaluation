@@ -1,11 +1,12 @@
+
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { fetchQuestions, submitResponses } from "@/data/questions";
 import { QuestionResponse, QuestionEvaluation } from "@/types";
 import QuestionCard from "@/components/QuestionCard";
 import ProgressBar from "@/components/ProgressBar";
 import AnimatedContainer from "@/components/AnimatedContainer";
+import ResultsView from "@/components/ResultsView";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -21,8 +22,8 @@ function blobToBase64(blob: Blob): Promise<string> {
 const Index = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<QuestionResponse[]>([]);
+  const [evaluations, setEvaluations] = useState<QuestionEvaluation[] | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const {
     data: questions,
@@ -40,8 +41,8 @@ const Index = () => {
         title: "Responses submitted",
         description: "Your responses have been evaluated.",
       });
-
-      navigate("/results", { state: { evaluations } });
+      
+      setEvaluations(evaluations);
     },
     onError: (error) => {
       console.error(error);
@@ -123,6 +124,12 @@ const Index = () => {
     }
   };
 
+  const handleStartOver = () => {
+    setEvaluations(null);
+    setResponses([]);
+    setCurrentQuestionIndex(0);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -141,6 +148,16 @@ const Index = () => {
         </p>
         <Button onClick={() => window.location.reload()}>Refresh</Button>
       </div>
+    );
+  }
+
+  // If we have evaluations, show the results view
+  if (evaluations) {
+    return (
+      <ResultsView 
+        evaluations={evaluations} 
+        onStartOver={handleStartOver} 
+      />
     );
   }
 
