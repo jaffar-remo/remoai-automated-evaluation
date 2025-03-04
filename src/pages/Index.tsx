@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { 
-  fetchQuestions, 
-  submitResponses, 
+import {
+  fetchQuestions,
+  submitResponses,
   fetchCodingQuestion,
-  evaluateCodingAnswer 
 } from "@/data/questions";
-import { 
-  QuestionResponse, 
-  QuestionEvaluation, 
-  CodingQuestionEvaluation 
+import {
+  QuestionResponse,
+  QuestionEvaluation,
+  CodingQuestionEvaluation,
 } from "@/types";
 import QuestionCard from "@/components/QuestionCard";
 import ProgressBar from "@/components/ProgressBar";
@@ -31,9 +30,12 @@ function blobToBase64(blob: Blob): Promise<string> {
 const Index = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<QuestionResponse[]>([]);
-  const [evaluations, setEvaluations] = useState<QuestionEvaluation[] | null>(null);
+  const [evaluations, setEvaluations] = useState<QuestionEvaluation[] | null>(
+    null
+  );
   const [isCodingStep, setIsCodingStep] = useState(false);
-  const [codingEvaluation, setCodingEvaluation] = useState<CodingQuestionEvaluation | null>(null);
+  const [codingEvaluation, setCodingEvaluation] =
+    useState<CodingQuestionEvaluation | null>(null);
   const { toast } = useToast();
 
   const {
@@ -67,9 +69,9 @@ const Index = () => {
         title: "Responses submitted",
         description: "Your responses have been evaluated.",
       });
-      
+
       setEvaluations(results);
-      
+
       if (!codingEvaluation) {
         setIsCodingStep(true);
         refetchCodingQuestion();
@@ -176,10 +178,10 @@ const Index = () => {
 
   if (evaluations && codingEvaluation) {
     return (
-      <ResultsView 
-        evaluations={evaluations} 
+      <ResultsView
+        evaluations={evaluations}
         codingEvaluation={codingEvaluation}
-        onStartOver={handleStartOver} 
+        onStartOver={handleStartOver}
       />
     );
   }
@@ -225,7 +227,9 @@ const Index = () => {
             </div>
           ) : codingQuestionError ? (
             <div className="flex flex-col items-center text-center">
-              <h2 className="text-xl font-bold mb-4">Failed to load coding question</h2>
+              <h2 className="text-xl font-bold mb-4">
+                Failed to load coding question
+              </h2>
               <p className="text-muted-foreground mb-6">
                 We couldn't load the coding challenge. Please try again.
               </p>
@@ -234,8 +238,11 @@ const Index = () => {
               </Button>
             </div>
           ) : (
-            <CodingQuestion 
-              question={codingQuestion || "Write a function that adds two numbers and returns the result."} 
+            <CodingQuestion
+              question={
+                codingQuestion.question ||
+                "Write a function that adds two numbers and returns the result."
+              }
               onComplete={handleCodingQuestionComplete}
               isSubmitting={false}
               className="w-full max-w-3xl mx-auto"
@@ -245,12 +252,6 @@ const Index = () => {
       </div>
     );
   }
-
-  const currentQuestion = questions[currentQuestionIndex];
-  const hasResponse = responses.some(
-    (r) => r.questionId === currentQuestion.id
-  );
-  const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   return (
     <div className="min-h-screen flex flex-col p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
