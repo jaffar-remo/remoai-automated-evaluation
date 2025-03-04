@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { 
@@ -52,6 +51,7 @@ const Index = () => {
     data: codingQuestion,
     isLoading: isCodingQuestionLoading,
     error: codingQuestionError,
+    refetch: refetchCodingQuestion,
   } = useQuery({
     queryKey: ["codingQuestion"],
     queryFn: fetchCodingQuestion,
@@ -68,10 +68,11 @@ const Index = () => {
         description: "Your responses have been evaluated.",
       });
       
-      if (codingEvaluation) {
-        setEvaluations(results);
-      } else {
+      setEvaluations(results);
+      
+      if (!codingEvaluation) {
         setIsCodingStep(true);
+        refetchCodingQuestion();
       }
     },
     onError: (error) => {
@@ -137,48 +138,8 @@ const Index = () => {
     submitResponsesMutation.mutate(encodedResponses);
   };
 
-  const handleCodingQuestionComplete = (code: string, feedback: string) => {
-    setCodingEvaluation({
-      code,
-      feedback
-    });
-    
-    // If we already have evaluations, show the full results
-    if (evaluations) {
-      // We already have evaluations, now we have coding evaluation too
-      // Show the complete results
-    } else {
-      // We don't have evaluations yet, this shouldn't happen
-      // but we'll handle it gracefully
-      toast({
-        title: "Error in evaluation sequence",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleLoadCodingQuestion = () => {
-    // Refetch the coding question
-    const { refetch } = useQuery({
-      queryKey: ["codingQuestion"],
-      queryFn: fetchCodingQuestion,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      enabled: false,
-      onSuccess: (data) => {
-        // handle success
-      },
-      onError: (error) => {
-        toast({
-          title: "Failed to load coding question",
-          description: "Please try again later.",
-          variant: "destructive",
-        });
-      }
-    });
-    
-    refetch();
+  const handleCodingQuestionComplete = (result: CodingQuestionEvaluation) => {
+    setCodingEvaluation(result);
   };
 
   const handlePreviousQuestion = () => {
@@ -213,7 +174,6 @@ const Index = () => {
     setIsCodingStep(false);
   };
 
-  // If we have both evaluations and coding evaluation, show the results view
   if (evaluations && codingEvaluation) {
     return (
       <ResultsView 
@@ -245,7 +205,6 @@ const Index = () => {
     );
   }
 
-  // Coding question step
   if (isCodingStep) {
     return (
       <div className="min-h-screen flex flex-col p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
@@ -270,7 +229,7 @@ const Index = () => {
               <p className="text-muted-foreground mb-6">
                 We couldn't load the coding challenge. Please try again.
               </p>
-              <Button onClick={handleLoadCodingQuestion}>
+              <Button onClick={() => refetchCodingQuestion()}>
                 Retry Loading Question
               </Button>
             </div>
@@ -287,7 +246,6 @@ const Index = () => {
     );
   }
 
-  // Regular interview questions
   const currentQuestion = questions[currentQuestionIndex];
   const hasResponse = responses.some(
     (r) => r.questionId === currentQuestion.id

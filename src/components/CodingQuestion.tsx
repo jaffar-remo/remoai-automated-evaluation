@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Loader2 } from 'lucide-react';
 import { evaluateCodingAnswer } from '@/data/questions';
 import { useToast } from '@/hooks/use-toast';
+import { CodingQuestionEvaluation } from '@/types';
 
 interface CodingQuestionProps {
   question: string;
-  onComplete: (code: string, feedback: string) => void;
+  onComplete: (result: CodingQuestionEvaluation) => void;
   isSubmitting: boolean;
   className?: string;
 }
@@ -41,8 +41,8 @@ const CodingQuestion: React.FC<CodingQuestionProps> = ({
 
     setIsEvaluating(true);
     try {
-      const feedback = await evaluateCodingAnswer(question, code);
-      onComplete(code, feedback);
+      const result = await evaluateCodingAnswer(question, code);
+      onComplete(result);
     } catch (error) {
       toast({
         title: "Evaluation failed",

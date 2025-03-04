@@ -66,7 +66,7 @@ export const fetchCodingQuestion = async (): Promise<string> => {
   }
 };
 
-export const evaluateCodingAnswer = async (question: string, answer: string): Promise<string> => {
+export const evaluateCodingAnswer = async (question: string, answer: string): Promise<CodingQuestionEvaluation> => {
   try {
     const response = await axios.post(`${BASE_URL}/evaluate-answer`, {
       question,
@@ -76,7 +76,13 @@ export const evaluateCodingAnswer = async (question: string, answer: string): Pr
         'Content-Type': 'application/json',
       },
     });
-    return response.data;
+    
+    // The response now contains { comment: string, evaluation: number }
+    return {
+      code: answer,
+      feedback: response.data.comment,
+      score: response.data.evaluation
+    };
   } catch (error) {
     console.error("Error evaluating coding answer:", error);
     throw error;

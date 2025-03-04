@@ -20,8 +20,16 @@ const ResultsView: React.FC<ResultsViewProps> = ({
   onStartOver 
 }) => {
   const calculateAverageScore = () => {
-    const totalScore = evaluations.reduce((sum, evaluation) => sum + evaluation.score, 0);
-    return Math.round((totalScore / evaluations.length) * 10) / 10;
+    let totalScore = evaluations.reduce((sum, evaluation) => sum + evaluation.score, 0);
+    let count = evaluations.length;
+    
+    // Include coding evaluation in average if it exists
+    if (codingEvaluation) {
+      totalScore += codingEvaluation.score;
+      count += 1;
+    }
+    
+    return Math.round((totalScore / count) * 10) / 10;
   };
 
   const getScoreColor = (score: number) => {
@@ -108,9 +116,17 @@ const ResultsView: React.FC<ResultsViewProps> = ({
         {codingEvaluation && (
           <Card className="overflow-hidden">
             <CardHeader className="pb-3">
-              <div className="flex items-center">
-                <Badge variant="default" className="mr-2">Coding Challenge</Badge>
-                <div className="text-lg font-medium">Coding Assessment</div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Badge variant="default" className="mr-2">Coding Challenge</Badge>
+                  <div className="text-lg font-medium">Coding Assessment</div>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-muted-foreground mr-2">Score:</span>
+                  <span className={`font-bold ${getScoreColor(codingEvaluation.score)}`}>
+                    {codingEvaluation.score}/100
+                  </span>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
