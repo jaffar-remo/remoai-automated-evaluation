@@ -20,14 +20,14 @@ const ResultsView: React.FC<ResultsViewProps> = ({ evaluations, onStartOver }) =
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-500';
-    if (score >= 6) return 'text-yellow-500';
+    if (score >= 80) return 'text-green-500';
+    if (score >= 60) return 'text-yellow-500';
     return 'text-red-500';
   };
 
   const getProgressColor = (score: number) => {
-    if (score >= 8) return 'bg-green-500';
-    if (score >= 6) return 'bg-yellow-500';
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
@@ -57,7 +57,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ evaluations, onStartOver }) =
         <div className="text-3xl font-bold mb-2 flex items-baseline">
           Overall Score: 
           <span className={`ml-2 ${getScoreColor(averageScore)}`}>
-            {averageScore}/10
+            {averageScore}/100
           </span>
         </div>
       </div>
@@ -70,12 +70,12 @@ const ResultsView: React.FC<ResultsViewProps> = ({ evaluations, onStartOver }) =
               <div className="flex items-center mt-2">
                 <span className="text-muted-foreground mr-2">Score:</span>
                 <span className={`font-bold ${getScoreColor(evaluation.score)}`}>
-                  {evaluation.score}/10
+                  {evaluation.score}/100
                 </span>
                 <div className="ml-4 flex-1 max-w-48">
                   <div 
                     className={`h-2 rounded-full ${getProgressColor(evaluation.score)}`}
-                    style={{ width: `${evaluation.score * 10}%` }}
+                    style={{ width: `${evaluation.score}%` }}
                   />
                 </div>
               </div>

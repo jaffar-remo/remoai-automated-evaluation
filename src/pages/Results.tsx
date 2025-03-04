@@ -60,10 +60,10 @@ const Results = () => {
           <div className="mb-4">
             <div className="flex justify-between mb-2">
               <span className="font-medium">Overall Score</span>
-              <span className="font-bold">{overallScore.toFixed(1)}/10</span>
+              <span className="font-bold">{overallScore.toFixed(1)}/100</span>
             </div>
             <Progress 
-              value={overallScore * 10} 
+              value={overallScore} 
               className="h-2" 
             />
           </div>
@@ -85,8 +85,8 @@ const Results = () => {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline">Question {evaluation.questionId}</Badge>
-                  <Badge variant={evaluation.score >= 7 ? "default" : evaluation.score >= 5 ? "secondary" : "destructive"}>
-                    Score: {evaluation.score}/10
+                  <Badge variant={evaluation.score >= 70 ? "default" : evaluation.score >= 50 ? "secondary" : "destructive"}>
+                    Score: {evaluation.score}/100
                   </Badge>
                 </div>
                 <h3 className="text-lg font-medium">{evaluation.questionText}</h3>
