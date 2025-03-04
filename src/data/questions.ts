@@ -1,4 +1,5 @@
-import { Question, QuestionResponse, QuestionResponseDto, QuestionEvaluation } from "@/types";
+
+import { Question, QuestionResponse, QuestionResponseDto, QuestionEvaluation, CodingQuestionEvaluation } from "@/types";
 import axios from 'axios';
 
 const BASE_URL = "http://0.0.0.0:8070";
@@ -52,5 +53,32 @@ export const submitResponses = async (responses: QuestionResponseDto[]): Promise
     return response.data;
   } catch (error) {
     throw new Error('Failed to submit responses');
+  }
+};
+
+export const fetchCodingQuestion = async (): Promise<string> => {
+  try {
+    const response = await axios.get(`${BASE_URL}/coding-question`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching coding question:", error);
+    throw error;
+  }
+};
+
+export const evaluateCodingAnswer = async (question: string, answer: string): Promise<string> => {
+  try {
+    const response = await axios.post(`${BASE_URL}/evaluate-answer`, {
+      question,
+      answer
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error evaluating coding answer:", error);
+    throw error;
   }
 };

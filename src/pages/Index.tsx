@@ -1,14 +1,24 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { fetchQuestions, submitResponses } from "@/data/questions";
-import { QuestionResponse, QuestionEvaluation } from "@/types";
+import { 
+  fetchQuestions, 
+  submitResponses, 
+  fetchCodingQuestion,
+  evaluateCodingAnswer 
+} from "@/data/questions";
+import { 
+  QuestionResponse, 
+  QuestionEvaluation, 
+  CodingQuestionEvaluation 
+} from "@/types";
 import QuestionCard from "@/components/QuestionCard";
 import ProgressBar from "@/components/ProgressBar";
 import AnimatedContainer from "@/components/AnimatedContainer";
 import ResultsView from "@/components/ResultsView";
+import CodingQuestion from "@/components/CodingQuestion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Code, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -23,17 +33,31 @@ const Index = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<QuestionResponse[]>([]);
   const [evaluations, setEvaluations] = useState<QuestionEvaluation[] | null>(null);
+  const [isCodingStep, setIsCodingStep] = useState(false);
+  const [codingEvaluation, setCodingEvaluation] = useState<CodingQuestionEvaluation | null>(null);
   const { toast } = useToast();
 
   const {
     data: questions,
-    isLoading,
-    error,
+    isLoading: isQuestionsLoading,
+    error: questionsError,
   } = useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+  });
+
+  const {
+    data: codingQuestion,
+    isLoading: isCodingQuestionLoading,
+    error: codingQuestionError,
+  } = useQuery({
+    queryKey: ["codingQuestion"],
+    queryFn: fetchCodingQuestion,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: false, // Not immediately loaded
   });
 
   const submitResponsesMutation = useMutation({
@@ -44,7 +68,11 @@ const Index = () => {
         description: "Your responses have been evaluated.",
       });
       
-      setEvaluations(results);
+      if (codingEvaluation) {
+        setEvaluations(results);
+      } else {
+        setIsCodingStep(true);
+      }
     },
     onError: (error) => {
       console.error(error);
@@ -109,6 +137,50 @@ const Index = () => {
     submitResponsesMutation.mutate(encodedResponses);
   };
 
+  const handleCodingQuestionComplete = (code: string, feedback: string) => {
+    setCodingEvaluation({
+      code,
+      feedback
+    });
+    
+    // If we already have evaluations, show the full results
+    if (evaluations) {
+      // We already have evaluations, now we have coding evaluation too
+      // Show the complete results
+    } else {
+      // We don't have evaluations yet, this shouldn't happen
+      // but we'll handle it gracefully
+      toast({
+        title: "Error in evaluation sequence",
+        description: "Please try again or contact support.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLoadCodingQuestion = () => {
+    // Refetch the coding question
+    const { refetch } = useQuery({
+      queryKey: ["codingQuestion"],
+      queryFn: fetchCodingQuestion,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      enabled: false,
+      onSuccess: (data) => {
+        // handle success
+      },
+      onError: (error) => {
+        toast({
+          title: "Failed to load coding question",
+          description: "Please try again later.",
+          variant: "destructive",
+        });
+      }
+    });
+    
+    refetch();
+  };
+
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex((prev) => prev - 1);
@@ -135,11 +207,24 @@ const Index = () => {
 
   const handleStartOver = () => {
     setEvaluations(null);
+    setCodingEvaluation(null);
     setResponses([]);
     setCurrentQuestionIndex(0);
+    setIsCodingStep(false);
   };
 
-  if (isLoading) {
+  // If we have both evaluations and coding evaluation, show the results view
+  if (evaluations && codingEvaluation) {
+    return (
+      <ResultsView 
+        evaluations={evaluations} 
+        codingEvaluation={codingEvaluation}
+        onStartOver={handleStartOver} 
+      />
+    );
+  }
+
+  if (isQuestionsLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -148,7 +233,7 @@ const Index = () => {
     );
   }
 
-  if (error || !questions) {
+  if (questionsError || !questions) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
         <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
@@ -160,16 +245,49 @@ const Index = () => {
     );
   }
 
-  // If we have evaluations, show the results view
-  if (evaluations) {
+  // Coding question step
+  if (isCodingStep) {
     return (
-      <ResultsView 
-        evaluations={evaluations} 
-        onStartOver={handleStartOver} 
-      />
+      <div className="min-h-screen flex flex-col p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+            Coding Challenge
+          </h1>
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Complete the coding challenge to finish your assessment.
+          </p>
+        </header>
+
+        <div className="flex-grow flex flex-col items-center justify-center mb-8">
+          {isCodingQuestionLoading ? (
+            <div className="flex flex-col items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p>Loading coding question...</p>
+            </div>
+          ) : codingQuestionError ? (
+            <div className="flex flex-col items-center text-center">
+              <h2 className="text-xl font-bold mb-4">Failed to load coding question</h2>
+              <p className="text-muted-foreground mb-6">
+                We couldn't load the coding challenge. Please try again.
+              </p>
+              <Button onClick={handleLoadCodingQuestion}>
+                Retry Loading Question
+              </Button>
+            </div>
+          ) : (
+            <CodingQuestion 
+              question={codingQuestion || "Write a function that adds two numbers and returns the result."} 
+              onComplete={handleCodingQuestionComplete}
+              isSubmitting={false}
+              className="w-full max-w-3xl mx-auto"
+            />
+          )}
+        </div>
+      </div>
     );
   }
 
+  // Regular interview questions
   const currentQuestion = questions[currentQuestionIndex];
   const hasResponse = responses.some(
     (r) => r.questionId === currentQuestion.id
@@ -257,8 +375,8 @@ const Index = () => {
               </>
             ) : (
               <>
-                Submit All Answers
-                <ArrowRight className="h-4 w-4 ml-2" />
+                Continue to Coding Challenge
+                <Code className="h-4 w-4 ml-2" />
               </>
             )}
           </Button>

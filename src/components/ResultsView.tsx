@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { QuestionEvaluation } from '@/types';
+import { QuestionEvaluation, CodingQuestionEvaluation } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -10,10 +10,15 @@ import { Badge } from '@/components/ui/badge';
 
 interface ResultsViewProps {
   evaluations: QuestionEvaluation[];
+  codingEvaluation?: CodingQuestionEvaluation;
   onStartOver: () => void;
 }
 
-const ResultsView: React.FC<ResultsViewProps> = ({ evaluations, onStartOver }) => {
+const ResultsView: React.FC<ResultsViewProps> = ({ 
+  evaluations, 
+  codingEvaluation, 
+  onStartOver 
+}) => {
   const calculateAverageScore = () => {
     const totalScore = evaluations.reduce((sum, evaluation) => sum + evaluation.score, 0);
     return Math.round((totalScore / evaluations.length) * 10) / 10;
@@ -99,6 +104,34 @@ const ResultsView: React.FC<ResultsViewProps> = ({ evaluations, onStartOver }) =
             </CardContent>
           </Card>
         ))}
+
+        {codingEvaluation && (
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex items-center">
+                <Badge variant="default" className="mr-2">Coding Challenge</Badge>
+                <div className="text-lg font-medium">Coding Assessment</div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Your Code:</h4>
+                  <pre className="text-sm bg-slate-950 text-slate-50 p-4 rounded-md overflow-x-auto">
+                    <code>{codingEvaluation.code}</code>
+                  </pre>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Feedback:</h4>
+                  <p className="text-sm">
+                    {codingEvaluation.feedback}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

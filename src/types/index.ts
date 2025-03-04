@@ -30,3 +30,8 @@ export interface QuestionEvaluation {
   score: number;
   feedback: string;
 }
+
+export interface CodingQuestionEvaluation {
+  code: string;
+  feedback: string;
+}
