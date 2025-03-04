@@ -161,7 +161,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           {isSubmitting && (
             <Button disabled className="rounded-full px-6 shadow-lg">
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Submitting...
+              Evaluating your answer...
             </Button>
           )}
         </div>

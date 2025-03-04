@@ -1,49 +1,85 @@
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { fetchQuestions, submitResponses } from "@/data/questions";
+import { QuestionResponse } from "@/types";
+import QuestionCard from "@/components/QuestionCard";
+import ProgressBar from "@/components/ProgressBar";
+import AnimatedContainer from "@/components/AnimatedContainer";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchQuestions } from '@/data/questions';
-import { Question, QuestionResponse } from '@/types';
-import QuestionCard from '@/components/QuestionCard';
-import ProgressBar from '@/components/ProgressBar';
-import AnimatedContainer from '@/components/AnimatedContainer';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, _) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.readAsDataURL(blob);
+  });
+}
 
 const Index = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<QuestionResponse[]>([]);
-  const [submittingResponse, setSubmittingResponse] = useState(false);
   const { toast } = useToast();
 
-  const { data: questions, isLoading, error } = useQuery({
-    queryKey: ['questions'],
+  const {
+    data: questions,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["questions"],
     queryFn: fetchQuestions,
+  });
+
+  const submitResponsesMutation = useMutation({
+    mutationFn: submitResponses,
+    onSuccess: (res) => {
+      toast({
+        title: "Responses submitted",
+        description: "Your responses have been submitted.",
+      });
+
+      console.log(res);
+    },
+    onError: (error) => {
+      console.error(error);
+      toast({
+        title: "Something went wrong",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleRecordingComplete = (questionId: string, audioBlob: Blob) => {
     // Check if response for this question already exists
-    const existingResponseIndex = responses.findIndex(r => r.questionId === questionId);
-    
+    const existingResponseIndex = responses.findIndex(
+      (r) => r.questionId === questionId
+    );
+
     if (existingResponseIndex >= 0) {
       // Update existing response
-      setResponses(prev => prev.map((response, index) => 
-        index === existingResponseIndex 
-          ? { ...response, audioBlob } 
-          : response
-      ));
+      setResponses((prev) =>
+        prev.map((response, index) =>
+          index === existingResponseIndex
+            ? { ...response, audioBlob }
+            : response
+        )
+      );
     } else {
       // Add new response
-      setResponses(prev => [...prev, { questionId, audioBlob }]);
+      setResponses((prev) => [...prev, { questionId, audioBlob }]);
     }
   };
 
   const handleSubmitResponse = async () => {
     if (!questions) return;
-    
+
     const currentQuestion = questions[currentQuestionIndex];
-    const responseForCurrentQuestion = responses.find(r => r.questionId === currentQuestion.id);
-    
+    const responseForCurrentQuestion = responses.find(
+      (r) => r.questionId === currentQuestion.id
+    );
+
     if (!responseForCurrentQuestion) {
       toast({
         title: "No recording found",
@@ -52,46 +88,70 @@ const Index = () => {
       });
       return;
     }
-    
-    setSubmittingResponse(true);
-    
-    try {
-      // Mock API call to send recording
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful submission
-      toast({
-        title: "Answer submitted successfully",
-        description: "Your recording has been saved.",
-      });
-      
-      // Move to next question
-      if (currentQuestionIndex < (questions?.length || 0) - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-      }
-    } catch (error) {
-      toast({
-        title: "Error submitting answer",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmittingResponse(false);
-    }
+
+    // const encodedResponses = await Promise.all(responses.map(async (response) => {
+    //   const base64Audio = await new Promise<string>((resolve) => {
+    //     const reader = new FileReader();
+    //     reader.onloadend = () => {
+    //       const base64 = reader.result as string;
+    //       const base64Data = base64.split(',')[1];
+    //       resolve(base64Data);
+    //     };
+    //     reader.readAsDataURL(response.audioBlob);
+    //   });
+    //   return { ...response, audioBlob: base64Audio };
+    // }));
+
+    const encodedResponses = await Promise.all(
+      responses.map(async (response) => {
+        const base64Audio = await blobToBase64(response.audioBlob);
+        const base64Data = base64Audio.split(",")[1];
+        return { ...response, audioBlob: base64Data };
+      })
+    );
+
+    submitResponsesMutation.mutate(encodedResponses);
+
+    // setSubmittingResponse(true);
+    // console.log(responses)
+
+    // try {
+    //   // Mock API call to send recording
+    //   await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    //   // Mock successful submission
+    //   toast({
+    //     title: "Answer submitted successfully",
+    //     description: "Your recording has been saved.",
+    //   });
+
+    //   // Move to next question
+    //   if (currentQuestionIndex < (questions?.length || 0) - 1) {
+    //     setCurrentQuestionIndex((prev) => prev + 1);
+    //   }
+    // } catch (error) {
+    //   toast({
+    //     title: "Error submitting answer",
+    //     description: "Please try again.",
+    //     variant: "destructive",
+    //   });
+    // } finally {
+    //   setSubmittingResponse(false);
+    // }
   };
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      setCurrentQuestionIndex((prev) => prev - 1);
     }
   };
 
   const handleNextQuestion = () => {
     if (questions && currentQuestionIndex < questions.length - 1) {
       const hasResponseForCurrentQuestion = responses.some(
-        r => r.questionId === questions[currentQuestionIndex].id
+        (r) => r.questionId === questions[currentQuestionIndex].id
       );
-      
+
       if (!hasResponseForCurrentQuestion) {
         toast({
           title: "No recording found",
@@ -100,7 +160,7 @@ const Index = () => {
         });
         return;
       }
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex((prev) => prev + 1);
     }
   };
 
@@ -126,21 +186,25 @@ const Index = () => {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const hasResponse = responses.some(r => r.questionId === currentQuestion.id);
+  const hasResponse = responses.some(
+    (r) => r.questionId === currentQuestion.id
+  );
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   return (
     <div className="min-h-screen flex flex-col p-4 sm:p-6 md:p-8 max-w-5xl mx-auto">
       <header className="mb-8 text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Interview Practice</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+          AI Screening
+        </h1>
         <p className="text-muted-foreground max-w-xl mx-auto">
-          Record your answers to common interview questions and improve your skills.
+          Record your answers to the questions and our AI will evaluate them.
         </p>
       </header>
 
-      <ProgressBar 
-        currentQuestion={currentQuestionIndex + 1} 
-        totalQuestions={questions.length} 
+      <ProgressBar
+        currentQuestion={currentQuestionIndex + 1}
+        totalQuestions={questions.length}
         className="mb-8"
       />
 
@@ -155,7 +219,7 @@ const Index = () => {
           <QuestionCard
             question={currentQuestion}
             onRecordingComplete={handleRecordingComplete}
-            isSubmitting={submittingResponse}
+            isSubmitting={submitResponsesMutation.isPending}
             className="mb-8"
           />
         </AnimatedContainer>
@@ -165,7 +229,9 @@ const Index = () => {
         <Button
           variant="outline"
           onClick={handlePreviousQuestion}
-          disabled={currentQuestionIndex === 0 || submittingResponse}
+          disabled={
+            currentQuestionIndex === 0 || submitResponsesMutation.isPending
+          }
           className="px-4 py-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -175,7 +241,7 @@ const Index = () => {
         {!isLastQuestion ? (
           <Button
             onClick={handleNextQuestion}
-            disabled={!hasResponse || submittingResponse}
+            disabled={!hasResponse || submitResponsesMutation.isPending}
             className="px-4 py-2"
           >
             Next
@@ -184,13 +250,13 @@ const Index = () => {
         ) : (
           <Button
             onClick={handleSubmitResponse}
-            disabled={!hasResponse || submittingResponse}
+            disabled={!hasResponse || submitResponsesMutation.isPending}
             className="px-4 py-2"
           >
-            {submittingResponse ? (
+            {submitResponsesMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Submitting...
+                Evaluating your answer...
               </>
             ) : (
               <>
