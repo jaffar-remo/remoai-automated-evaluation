@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { fetchQuestions, submitResponses } from "@/data/questions";
-import { QuestionResponse } from "@/types";
+import { QuestionResponse, QuestionEvaluation } from "@/types";
 import QuestionCard from "@/components/QuestionCard";
 import ProgressBar from "@/components/ProgressBar";
 import AnimatedContainer from "@/components/AnimatedContainer";
@@ -21,6 +22,7 @@ const Index = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<QuestionResponse[]>([]);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const {
     data: questions,
@@ -33,13 +35,13 @@ const Index = () => {
 
   const submitResponsesMutation = useMutation({
     mutationFn: submitResponses,
-    onSuccess: (res) => {
+    onSuccess: (evaluations: QuestionEvaluation[]) => {
       toast({
         title: "Responses submitted",
-        description: "Your responses have been submitted.",
+        description: "Your responses have been evaluated.",
       });
 
-      console.log(res);
+      navigate("/results", { state: { evaluations } });
     },
     onError: (error) => {
       console.error(error);
@@ -52,13 +54,11 @@ const Index = () => {
   });
 
   const handleRecordingComplete = (questionId: string, audioBlob: Blob) => {
-    // Check if response for this question already exists
     const existingResponseIndex = responses.findIndex(
       (r) => r.questionId === questionId
     );
 
     if (existingResponseIndex >= 0) {
-      // Update existing response
       setResponses((prev) =>
         prev.map((response, index) =>
           index === existingResponseIndex
@@ -67,7 +67,6 @@ const Index = () => {
         )
       );
     } else {
-      // Add new response
       setResponses((prev) => [...prev, { questionId, audioBlob }]);
     }
   };
@@ -89,19 +88,6 @@ const Index = () => {
       return;
     }
 
-    // const encodedResponses = await Promise.all(responses.map(async (response) => {
-    //   const base64Audio = await new Promise<string>((resolve) => {
-    //     const reader = new FileReader();
-    //     reader.onloadend = () => {
-    //       const base64 = reader.result as string;
-    //       const base64Data = base64.split(',')[1];
-    //       resolve(base64Data);
-    //     };
-    //     reader.readAsDataURL(response.audioBlob);
-    //   });
-    //   return { ...response, audioBlob: base64Audio };
-    // }));
-
     const encodedResponses = await Promise.all(
       responses.map(async (response) => {
         const base64Audio = await blobToBase64(response.audioBlob);
@@ -111,33 +97,6 @@ const Index = () => {
     );
 
     submitResponsesMutation.mutate(encodedResponses);
-
-    // setSubmittingResponse(true);
-    // console.log(responses)
-
-    // try {
-    //   // Mock API call to send recording
-    //   await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    //   // Mock successful submission
-    //   toast({
-    //     title: "Answer submitted successfully",
-    //     description: "Your recording has been saved.",
-    //   });
-
-    //   // Move to next question
-    //   if (currentQuestionIndex < (questions?.length || 0) - 1) {
-    //     setCurrentQuestionIndex((prev) => prev + 1);
-    //   }
-    // } catch (error) {
-    //   toast({
-    //     title: "Error submitting answer",
-    //     description: "Please try again.",
-    //     variant: "destructive",
-    //   });
-    // } finally {
-    //   setSubmittingResponse(false);
-    // }
   };
 
   const handlePreviousQuestion = () => {
@@ -204,25 +163,27 @@ const Index = () => {
 
       <ProgressBar
         currentQuestion={currentQuestionIndex + 1}
-        totalQuestions={questions.length}
+        totalQuestions={questions?.length || 0}
         className="mb-8"
       />
 
       <div className="flex-grow flex flex-col items-center justify-center mb-8">
-        <AnimatedContainer
-          isVisible={true}
-          animateIn="animate-scale-in"
-          animateOut="animate-scale-out"
-          className="w-full"
-          key={currentQuestion.id}
-        >
-          <QuestionCard
-            question={currentQuestion}
-            onRecordingComplete={handleRecordingComplete}
-            isSubmitting={submitResponsesMutation.isPending}
-            className="mb-8"
-          />
-        </AnimatedContainer>
+        {questions && (
+          <AnimatedContainer
+            isVisible={true}
+            animateIn="animate-scale-in"
+            animateOut="animate-scale-out"
+            className="w-full"
+            key={questions[currentQuestionIndex].id}
+          >
+            <QuestionCard
+              question={questions[currentQuestionIndex]}
+              onRecordingComplete={handleRecordingComplete}
+              isSubmitting={submitResponsesMutation.isPending}
+              className="mb-8"
+            />
+          </AnimatedContainer>
+        )}
       </div>
 
       <div className="flex justify-between items-center mt-auto">
@@ -238,10 +199,14 @@ const Index = () => {
           Previous
         </Button>
 
-        {!isLastQuestion ? (
+        {questions && currentQuestionIndex < questions.length - 1 ? (
           <Button
             onClick={handleNextQuestion}
-            disabled={!hasResponse || submitResponsesMutation.isPending}
+            disabled={
+              !responses.some(
+                (r) => r.questionId === questions[currentQuestionIndex].id
+              ) || submitResponsesMutation.isPending
+            }
             className="px-4 py-2"
           >
             Next
@@ -250,17 +215,23 @@ const Index = () => {
         ) : (
           <Button
             onClick={handleSubmitResponse}
-            disabled={!hasResponse || submitResponsesMutation.isPending}
+            disabled={
+              !questions ||
+              !responses.some(
+                (r) => r.questionId === questions[currentQuestionIndex].id
+              ) ||
+              submitResponsesMutation.isPending
+            }
             className="px-4 py-2"
           >
             {submitResponsesMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Evaluating your answer...
+                Evaluating your answers...
               </>
             ) : (
               <>
-                Submit Final Answer
+                Submit All Answers
                 <ArrowRight className="h-4 w-4 ml-2" />
               </>
             )}

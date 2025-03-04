@@ -1,3 +1,4 @@
+
 export interface Question {
   id: string;
   text: string;
@@ -19,4 +20,12 @@ export interface QuestionResponse {
 export interface QuestionResponseDto {
   questionId: string;
   audioBlob: string;
+}
+
+export interface QuestionEvaluation {
+  questionId: string;
+  questionText: string;
+  answerText: string;
+  score: number;
+  feedback: string;
 }
